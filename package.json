@@ -13,9 +13,11 @@
   "license": "ISC",
   "dependencies": {
     "@types/express": "^4.17.13",
+    "@types/multer": "^1.4.7",
     "@vscode/sqlite3": "^5.0.7",
     "express": "^4.17.3",
     "knex": "^1.0.3",
+    "multer": "^1.4.4",
     "sqlite3": "^5.0.2"
   },
   "devDependencies": {
