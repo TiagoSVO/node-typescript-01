@@ -5,6 +5,7 @@ export async function up(knex: Knex) {
         table.increments('id').primary();
         table.string('title').notNullable();
         table.string('image').notNullable();
+        table.timestamps();
     });
 };
 

@@ -11,6 +11,8 @@ export async function up(knex: Knex) {
             .notNullable()
             .references('id')
             .inTable('items');
+        table.unique(['location_id', 'item_id']);
+        table.timestamps();
 
     });
 };
