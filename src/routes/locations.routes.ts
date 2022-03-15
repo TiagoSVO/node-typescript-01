@@ -1,6 +1,11 @@
-import { query, Router } from 'express'
+import { Router } from 'express';
 import knex from "../database/connection";
+import multer from 'multer';
+import { configMulterLocations } from '../configs/multer';
+import { removeFile } from '../utils';
+import path from 'path';
 
+const upload = multer(configMulterLocations)
 
 const locationsRouter = Router();
 
@@ -52,9 +57,43 @@ locationsRouter.get('/', async (request, response) => {
     return response.status(200).json({ locations: localizationsWithItems, message: 'Method GET Locations' })
 })
 
-locationsRouter.post('/', async (request, response) => {
-    const { locationData } = request.body
-    return response.status(200).json({ message: 'Location created successfuly' })
+locationsRouter.post('/', upload.single('image'), async (request, response) => {
+    const { 
+        name,
+        email,
+        whatsapp,
+        latitude,
+        longitude,
+        city,
+        uf
+    }  = request.body
+
+    const transaction = await knex.transaction()
+
+    const newLocation = {
+        name,
+        email,
+        whatsapp,
+        latitude,
+        longitude,
+        city,
+        uf,
+        image: request.file?.filename
+    }
+    
+    const newId = await transaction('locations').insert(newLocation)
+
+    await transaction.commit();
+
+    if(transaction.isCompleted()) {
+        return response.status(200).json({
+            id: newId[0],
+            ...newLocation
+        })
+    } else {
+        removeFile(path.join(`${request.file?.destination}`, `${request.file?.filename}`));
+        return response.status(500).json({error: "An error ocorred while inserting new location. Try to insert it again later or contact support."})
+    }
 })
 
 export default locationsRouter
