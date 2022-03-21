@@ -47,7 +47,7 @@ locationsRouter.get('/', async (request, response) => {
             const locationItems = await knex('items')
                                         .join('location_items', 'items.id', '=', 'location_items.item_id')
                                         .where('location_items.location_id', location.id)
-                                        .select('*')
+                                        .select('items.*')
             return {...location, items: locationItems} 
         }))
     }
@@ -65,7 +65,8 @@ locationsRouter.post('/', upload.single('image'), async (request, response) => {
         latitude,
         longitude,
         city,
-        uf
+        uf,
+        items
     }  = request.body
 
     const transaction = await knex.transaction()
@@ -83,12 +84,35 @@ locationsRouter.post('/', upload.single('image'), async (request, response) => {
     
     const newId = await transaction('locations').insert(newLocation)
 
+    const location_id = newId[0]
+
+    const regExp = new RegExp(/\d+/, 'g')
+
+    const locationItems = (items) ? items.split(',')
+                          .map((item:any) => item.match(regExp) != null ? item.match(regExp).join('') : '')
+                          .filter((item:string) => item)
+                          .map((item:string) => Number(item.trim()))
+                          .map((item_id:number) => {
+                            return {
+                                location_id,
+                                item_id
+                            }
+                        }) : []
+
+    await transaction('location_items').insert(locationItems);
+
+    const itemsLocation = await transaction('items')
+                                .join('location_items', 'items.id', '=', 'location_items.item_id')
+                                .where('location_items.location_id', location_id)
+                                .select('items.*')
+
     await transaction.commit();
 
     if(transaction.isCompleted()) {
         return response.status(200).json({
             id: newId[0],
-            ...newLocation
+            ...newLocation,
+            items: itemsLocation
         })
     } else {
         removeFile(path.join(`${request.file?.destination}`, `${request.file?.filename}`));
